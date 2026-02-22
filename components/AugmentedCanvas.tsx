@@ -8,6 +8,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { GeneratedImage, AnalysisResult } from '../types';
 import { WidgetEngine } from './widgets/WidgetEngine';
 import { motion, AnimatePresence } from 'framer-motion';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 
 interface Props {
   image: GeneratedImage;
@@ -53,16 +55,84 @@ export const AugmentedCanvas: React.FC<Props> = ({ image, analysis, isScanning =
         className={`relative max-w-full max-h-full shadow-2xl rounded-xl border border-white/10 bg-gray-900 group ${isScanning ? 'overflow-hidden' : ''}`}
         style={{ aspectRatio: '16 / 9' }}
       >
-        
-        {/* The Image */}
-        <img 
-          src={`data:${image.mimeType};base64,${image.base64}`} 
-          alt="Generated Infographic"
-          className={`w-full h-full object-contain rounded-xl transition-all duration-700 ease-in-out ${activeSegmentId !== null ? 'blur-[3px] opacity-50 scale-[1.01]' : 'opacity-100 scale-100'}`}
-        />
+        <TransformWrapper
+          initialScale={1}
+          minScale={0.5}
+          maxScale={4}
+          centerOnInit
+          wheel={{ step: 0.1 }}
+        >
+          {({ zoomIn, zoomOut, resetTransform }) => (
+            <>
+              {/* Zoom Controls */}
+              <div className="absolute top-4 right-4 z-50 flex gap-2 bg-black/50 backdrop-blur-md p-2 rounded-lg border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <button onClick={() => zoomIn()} className="p-1.5 hover:bg-white/20 rounded-md text-white transition-colors" title="Zoom In"><ZoomIn size={18} /></button>
+                <button onClick={() => zoomOut()} className="p-1.5 hover:bg-white/20 rounded-md text-white transition-colors" title="Zoom Out"><ZoomOut size={18} /></button>
+                <button onClick={() => resetTransform()} className="p-1.5 hover:bg-white/20 rounded-md text-white transition-colors" title="Reset Zoom"><Maximize size={18} /></button>
+              </div>
 
-        {/* Focus Darkening Overlay */}
-        <div className={`absolute inset-0 bg-black/60 rounded-xl transition-opacity duration-300 pointer-events-none ${activeSegmentId !== null ? 'opacity-100' : 'opacity-0'}`} />
+              <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%', height: '100%' }}>
+                {/* The Image */}
+                <img 
+                  src={`data:${image.mimeType};base64,${image.base64}`} 
+                  alt="Generated Infographic"
+                  className={`w-full h-full object-contain rounded-xl transition-all duration-700 ease-in-out ${activeSegmentId !== null ? 'blur-[3px] opacity-50 scale-[1.01]' : 'opacity-100 scale-100'}`}
+                />
+
+                {/* Focus Darkening Overlay */}
+                <div className={`absolute inset-0 bg-black/60 rounded-xl transition-opacity duration-300 pointer-events-none ${activeSegmentId !== null ? 'opacity-100' : 'opacity-0'}`} />
+
+                {/* Interactive Hitboxes Layer */}
+                {!isScanning && analysis?.segments && analysis.segments.map((segment, index) => {
+                  const isActive = activeSegmentId === index;
+                  const isScalable = segment.format === 'compact' || segment.format === 'stats';
+                  
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        left: `${segment.bounds.x}%`,
+                        top: `${segment.bounds.y}%`,
+                        width: `${segment.bounds.width}%`,
+                        height: `${segment.bounds.height}%`,
+                      }}
+                      className={`absolute ${isActive ? 'z-40' : 'z-30'}`}
+                      onMouseEnter={() => handleMouseEnter(index)}
+                      onMouseLeave={handleMouseLeave}
+                    >
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ 
+                          opacity: isActive ? 1 : 0.6,
+                          scale: isActive ? 1.05 : 1,
+                          borderColor: isActive ? 'rgba(34, 211, 238, 1)' : 'rgba(255, 255, 255, 0.2)',
+                          backgroundColor: isActive ? 'rgba(34, 211, 238, 0.1)' : 'transparent',
+                          boxShadow: isActive ? '0 0 30px rgba(34, 211, 238, 0.5)' : 'none'
+                        }}
+                        whileHover={{ 
+                            opacity: 1,
+                            scale: isScalable ? 1.05 : 1.0, 
+                            borderColor: 'rgba(34, 211, 238, 1)', 
+                            backgroundColor: 'rgba(34, 211, 238, 0.15)',
+                            boxShadow: '0 0 15px rgba(34, 211, 238, 0.5)' 
+                        }}
+                        transition={{ duration: 0.2 }}
+                        className="w-full h-full border-2 rounded-lg cursor-pointer relative"
+                      >
+                          {!isActive && activeSegmentId === null && (
+                              <>
+                                <div className="absolute top-0 right-0 -mt-1 -mr-1 w-3 h-3 bg-cyan-400 rounded-full animate-ping opacity-75" />
+                                <div className="absolute top-0 right-0 -mt-1 -mr-1 w-3 h-3 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+                              </>
+                          )}
+                      </motion.div>
+                    </div>
+                  );
+                })}
+              </TransformComponent>
+            </>
+          )}
+        </TransformWrapper>
 
         {/* SCANNING MODE OVERLAY */}
         <AnimatePresence>
@@ -89,54 +159,6 @@ export const AugmentedCanvas: React.FC<Props> = ({ image, analysis, isScanning =
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Interactive Hitboxes Layer */}
-        {!isScanning && analysis?.segments && analysis.segments.map((segment, index) => {
-          const isActive = activeSegmentId === index;
-          const isScalable = segment.format === 'compact' || segment.format === 'stats';
-          
-          return (
-            <div
-              key={index}
-              style={{
-                left: `${segment.bounds.x}%`,
-                top: `${segment.bounds.y}%`,
-                width: `${segment.bounds.width}%`,
-                height: `${segment.bounds.height}%`,
-              }}
-              className={`absolute ${isActive ? 'z-40' : 'z-30'}`}
-              onMouseEnter={() => handleMouseEnter(index)}
-              onMouseLeave={handleMouseLeave}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ 
-                  opacity: isActive ? 1 : 0.6,
-                  scale: isActive ? 1.05 : 1,
-                  borderColor: isActive ? 'rgba(34, 211, 238, 1)' : 'rgba(255, 255, 255, 0.2)',
-                  backgroundColor: isActive ? 'rgba(34, 211, 238, 0.1)' : 'transparent',
-                  boxShadow: isActive ? '0 0 30px rgba(34, 211, 238, 0.5)' : 'none'
-                }}
-                whileHover={{ 
-                    opacity: 1,
-                    scale: isScalable ? 1.05 : 1.0, 
-                    borderColor: 'rgba(34, 211, 238, 1)', 
-                    backgroundColor: 'rgba(34, 211, 238, 0.15)',
-                    boxShadow: '0 0 15px rgba(34, 211, 238, 0.5)' 
-                }}
-                transition={{ duration: 0.2 }}
-                className="w-full h-full border-2 rounded-lg cursor-pointer relative"
-              >
-                  {!isActive && activeSegmentId === null && (
-                      <>
-                        <div className="absolute top-0 right-0 -mt-1 -mr-1 w-3 h-3 bg-cyan-400 rounded-full animate-ping opacity-75" />
-                        <div className="absolute top-0 right-0 -mt-1 -mr-1 w-3 h-3 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
-                      </>
-                  )}
-              </motion.div>
-            </div>
-          );
-        })}
       </div>
 
       {/* CENTERED MODAL OVERLAY */}
