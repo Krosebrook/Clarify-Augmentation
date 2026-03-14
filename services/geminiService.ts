@@ -137,7 +137,6 @@ Return ONLY valid JSON.`;
       ],
       config: {
           tools: [{ googleSearch: {} }],
-          responseMimeType: 'application/json',
       }
     });
 

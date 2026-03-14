@@ -134,25 +134,49 @@ function App() {
       <div className="relative z-10 w-full h-full flex flex-col p-4 md:p-6">
         
         {/* Header */}
-        <header className="flex-none flex justify-between items-center pb-4">
-          <div className="flex items-center gap-2">
+        <header className="flex-none flex justify-between items-center pb-4 gap-4">
+          <div className="flex items-center gap-2 shrink-0">
              <h1 className="text-xl font-bold tracking-tighter text-white/90">LUMINA</h1>
           </div>
-          <div className="flex gap-4 items-center">
+          
+          {status !== 'idle' && (
+            <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-auto relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full opacity-0 group-hover:opacity-30 transition duration-500 blur"></div>
+              <div className="relative bg-black/50 backdrop-blur-md rounded-full flex items-center p-1 w-full border border-white/10">
+                <Search className="ml-3 text-gray-400 w-4 h-4 shrink-0" />
+                <input 
+                  type="text" 
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Generate new image..."
+                  className="w-full bg-transparent text-white px-3 py-1.5 text-sm focus:outline-none placeholder-gray-500"
+                />
+                <button 
+                  type="submit"
+                  disabled={!query.trim() || status === 'generating' || status === 'analyzing'}
+                  className="px-4 py-1.5 bg-white text-black text-sm font-bold rounded-full hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Generate
+                </button>
+              </div>
+            </form>
+          )}
+
+          <div className="flex gap-2 md:gap-4 items-center shrink-0">
             {data?.image && (
               <button 
                 onClick={handleDownload}
-                className="px-4 py-2 bg-white/10 hover:bg-cyan-500/20 border border-white/5 hover:border-cyan-500/50 rounded-full text-sm text-gray-200 hover:text-cyan-200 flex items-center gap-2 transition-all duration-300 backdrop-blur-sm"
+                className="px-3 md:px-4 py-2 bg-white/10 hover:bg-cyan-500/20 border border-white/5 hover:border-cyan-500/50 rounded-full text-xs md:text-sm text-gray-200 hover:text-cyan-200 flex items-center gap-2 transition-all duration-300 backdrop-blur-sm"
               >
-                <Download size={16} /> Save Image
+                <Download size={16} /> <span className="hidden md:inline">Save Image</span>
               </button>
             )}
             {status !== 'idle' && (
               <button 
                 onClick={handleReset} 
-                className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-full text-sm text-gray-400 hover:text-white flex items-center gap-2 transition-all duration-300"
+                className="px-3 md:px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-full text-xs md:text-sm text-gray-400 hover:text-white flex items-center gap-2 transition-all duration-300"
               >
-                <RefreshCw size={14} /> New Search
+                <RefreshCw size={14} /> <span className="hidden md:inline">New Search</span>
               </button>
             )}
           </div>
